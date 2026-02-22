@@ -8,6 +8,7 @@ The goal is to call this server from Slack and other applications.
 
 - `setup.sh` - install and configure everything
 - `litellm_config.yaml` - LiteLLM model mapping.
+- `goose_config.yaml` - Local Goose configuration for the task server
 - `goose_server.py` - local HTTP task server
 - `goose_client.py` - Python client (`submit_task`, `get_task_status`)
 - `goose_task.py` - CLI script to submit tasks and optionally wait for completion
@@ -54,10 +55,10 @@ source .venv/bin/activate
 python goose_task.py --task "Write a hello world program in Python" --wait
 ```
 
-You can optionally specify a different model (defaults to `bedrock-nova-lite`):
+You can optionally specify a different model (defaults to `bedrock-claude-opus-4-6`):
 
 ```bash
-python goose_task.py --task "Write a hello world program" --model bedrock-nova-pro --wait
+python goose_task.py --task "Write a hello world program" --model bedrock-claude-opus-4-6 --wait
 ```
 
 It submits the task, waits for completion, and shows the final status and output.
@@ -69,7 +70,7 @@ It submits the task, waits for completion, and shows the final status and output
 ```json
 {
   "task": "Write exactly one line: Hello, world!",
-  "model": "bedrock-nova-lite"
+  "model": "bedrock-claude-opus-4-6"
 }
 ```
 
@@ -77,5 +78,7 @@ It submits the task, waits for completion, and shows the final status and output
 
 ## Notes
 
-- Goose config is written to `~/.config/goose/config.yaml` by `setup.sh`.
+- Goose config is written to `goose_config.yaml` by `setup.sh`.
+- The task server uses `goose_config.yaml` as its local configuration, isolated from your global Goose settings.
 - Required keys are uppercase: `GOOSE_PROVIDER`, `GOOSE_MODEL`, `LITELLM_HOST`, `LITELLM_BASE_PATH`.
+- The task server runs Goose with bounded turns/retries to prevent runaway executions.

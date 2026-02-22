@@ -30,8 +30,26 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--model",
-        default="bedrock-nova-lite",
-        help="Model to use for the task (default: bedrock-nova-lite).",
+        default="bedrock-claude-opus-4-6",
+        help="Model to use for the task (default: bedrock-claude-opus-4-6).",
+    )
+    parser.add_argument(
+        "--max-turns",
+        type=int,
+        default=40,
+        help="Maximum Goose turns for this task (default: 40).",
+    )
+    parser.add_argument(
+        "--max-tool-repetitions",
+        type=int,
+        default=3,
+        help="Max identical consecutive tool calls (default: 3).",
+    )
+    parser.add_argument(
+        "--task-timeout",
+        type=int,
+        default=300,
+        help="Task timeout in seconds on the server (default: 300).",
     )
     parser.add_argument(
         "--server-url",
@@ -97,6 +115,9 @@ def main() -> None:
         task_text,
         working_directory=args.working_directory,
         model=args.model,
+        max_turns=args.max_turns,
+        max_tool_repetitions=args.max_tool_repetitions,
+        timeout_seconds=args.task_timeout,
     )
 
     print(f"task_id={response['task_id']}")

@@ -1,4 +1,4 @@
-# LiteLLM configuration for AWS Bedrock Nova models proxy
+# LiteLLM configuration for AWS Bedrock Claude 4.6 Opus proxy
 #
 # This file maps the local model names to the actual AWS Bedrock
 # foundation model ARN/identifiers.
@@ -6,19 +6,7 @@
 # to be configured in the environment or ~/.aws/credentials.
 
 model_list:
-  - model_name: bedrock-nova-micro
+  - model_name: bedrock-claude-opus-4-6
     litellm_params:
-      model: bedrock/amazon.nova-micro-v1:0
-      aws_region_name: us-east-1
-  - model_name: bedrock-nova-lite
-    litellm_params:
-      model: bedrock/amazon.nova-lite-v1:0
-      aws_region_name: us-east-1
-  - model_name: bedrock-nova-pro
-    litellm_params:
-      model: bedrock/amazon.nova-pro-v1:0
-      aws_region_name: us-east-1
-  - model_name: bedrock-nova-premier
-    litellm_params:
-      model: bedrock/amazon.nova-premier-v1:0
+      model: bedrock/us.anthropic.claude-opus-4-6-v1
       aws_region_name: us-east-1

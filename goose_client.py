@@ -26,12 +26,21 @@ class GooseTaskClient:
         task: str,
         working_directory: Optional[str] = None,
         model: Optional[str] = None,
+        max_turns: Optional[int] = None,
+        max_tool_repetitions: Optional[int] = None,
+        timeout_seconds: Optional[int] = None,
     ) -> dict:
         payload = {"task": task}
         if working_directory is not None:
             payload["working_directory"] = working_directory
         if model is not None:
             payload["model"] = model
+        if max_turns is not None:
+            payload["max_turns"] = max_turns
+        if max_tool_repetitions is not None:
+            payload["max_tool_repetitions"] = max_tool_repetitions
+        if timeout_seconds is not None:
+            payload["timeout_seconds"] = timeout_seconds
         return self._request_json("POST", "/tasks", payload)
 
     def get_task_status(self, task_id: str) -> dict:

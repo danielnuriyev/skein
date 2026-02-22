@@ -16,7 +16,10 @@ Task states: queued -> running -> completed/failed
 
 import argparse
 import json
+import os
+import shutil
 import subprocess
+import tempfile
 import threading
 import time
 import uuid
@@ -29,10 +32,24 @@ from urllib.parse import urlparse
 TERMINAL_STATUSES = {"completed", "failed"}
 TASKS: Dict[str, dict] = {}
 TASKS_LOCK = threading.Lock()
+DEFAULT_MAX_TURNS = 40
+DEFAULT_MAX_TOOL_REPETITIONS = 3
+DEFAULT_TIMEOUT_SECONDS = 300
 
 
 def utc_now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def build_task_prompt(task_text: str) -> str:
+    guardrails = (
+        "Important execution requirements:\n"
+        "- Apply changes directly to files in the working directory.\n"
+        "- Do not delegate, do not spawn background subtasks, and do not use app generators.\n"
+        "- Use direct file edit and shell tools only.\n"
+        "- After editing, verify by reading the target file(s).\n"
+    )
+    return f"{task_text.strip()}\n\n{guardrails}"
 
 
 def run_task(task_id: str) -> None:
@@ -45,41 +62,75 @@ def run_task(task_id: str) -> None:
         task["updated_at"] = utc_now()
         task["error"] = None
 
-    cmd = ["goose", "run", "--text", task["task"]]
-    if task.get("model"):
-        cmd.extend(["--model", task["model"]])
-    cwd = task["working_directory"]
+    # Create a temporary config directory for isolated Goose configuration
+    script_dir = Path(__file__).parent
+    project_config = script_dir / "goose_config.yaml"
 
-    try:
-        result = subprocess.run(
-            cmd,
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        status = "completed" if result.returncode == 0 else "failed"
-        error = None if result.returncode == 0 else "goose returned non-zero exit code"
-        stdout = result.stdout
-        stderr = result.stderr
-        exit_code = result.returncode
-    except Exception as exc:  # pragma: no cover
-        status = "failed"
-        error = str(exc)
-        stdout = ""
-        stderr = ""
-        exit_code = -1
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_config_dir = Path(tmpdir)
+        goose_subdir = tmp_config_dir / "goose"
+        goose_subdir.mkdir(parents=True)
+
+        if project_config.exists():
+            shutil.copy(project_config, goose_subdir / "config.yaml")
+
+        # Set environment to use local config directory
+        env = os.environ.copy()
+        env["XDG_CONFIG_HOME"] = str(tmp_config_dir)
+
+        cmd = [
+            "goose",
+            "run",
+            "--text",
+            build_task_prompt(task["task"]),
+            "--max-turns",
+            str(task.get("max_turns", DEFAULT_MAX_TURNS)),
+            "--max-tool-repetitions",
+            str(task.get("max_tool_repetitions", DEFAULT_MAX_TOOL_REPETITIONS)),
+        ]
+        if task.get("model"):
+            cmd.extend(["--model", task["model"]])
+        cwd = task["working_directory"]
+        timeout_seconds = int(task.get("timeout_seconds", DEFAULT_TIMEOUT_SECONDS))
+
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=cwd,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=timeout_seconds,
+                env=env,
+            )
+            status = "completed" if result.returncode == 0 else "failed"
+            error = None if result.returncode == 0 else "goose returned non-zero exit code"
+            stdout = result.stdout
+            stderr = result.stderr
+            exit_code = result.returncode
+        except subprocess.TimeoutExpired as exc:
+            status = "failed"
+            error = f"goose timed out after {timeout_seconds} seconds"
+            stdout = exc.stdout or ""
+            stderr = exc.stderr or ""
+            exit_code = 124
+        except Exception as exc:  # pragma: no cover
+            status = "failed"
+            error = str(exc)
+            stdout = ""
+            stderr = ""
+            exit_code = -1
 
     with TASKS_LOCK:
-        if task_id not in TASKS:
-            return
-        TASKS[task_id]["status"] = status
-        TASKS[task_id]["completed_at"] = utc_now()
-        TASKS[task_id]["updated_at"] = utc_now()
-        TASKS[task_id]["exit_code"] = exit_code
-        TASKS[task_id]["stdout"] = stdout
-        TASKS[task_id]["stderr"] = stderr
-        TASKS[task_id]["error"] = error
+            if task_id not in TASKS:
+                return
+            TASKS[task_id]["status"] = status
+            TASKS[task_id]["completed_at"] = utc_now()
+            TASKS[task_id]["updated_at"] = utc_now()
+            TASKS[task_id]["exit_code"] = exit_code
+            TASKS[task_id]["stdout"] = stdout
+            TASKS[task_id]["stderr"] = stderr
+            TASKS[task_id]["error"] = error
 
 
 class TaskHandler(BaseHTTPRequestHandler):
@@ -161,6 +212,9 @@ class TaskHandler(BaseHTTPRequestHandler):
             "task_id": task_id,
             "task": task_text,
             "model": payload.get("model"),
+            "max_turns": payload.get("max_turns", DEFAULT_MAX_TURNS),
+            "max_tool_repetitions": payload.get("max_tool_repetitions", DEFAULT_MAX_TOOL_REPETITIONS),
+            "timeout_seconds": payload.get("timeout_seconds", DEFAULT_TIMEOUT_SECONDS),
             "status": "queued",
             "working_directory": working_directory,
             "created_at": utc_now(),
