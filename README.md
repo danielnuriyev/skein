@@ -1,75 +1,81 @@
-# Goose + LiteLLM
+# Goose Task Server (LiteLLM + Bedrock)
 
-This folder sets up Goose to use models through a local LiteLLM proxy.
-This is a work in progress. My goal is to automate things that I do routinely.
+This project runs Goose behind a local HTTP task server.
 
-## What `setup.sh` does
+The goal is to call this server from Slack and other applications.
 
-Running `./setup.sh` will do most of the work:
+## Files
 
-- installs `uv` (if missing)
-- installs Goose CLI (if missing)
-- creates `.venv` with system Python (`/usr/bin/python3`)
-- installs LiteLLM proxy dependencies with `uv` (`litellm[proxy]`, `boto3`, `python-multipart`)
-- writes `~/.config/goose/config.yaml` for LiteLLM
-- keeps a backup of your previous Goose config if it exists
+- `setup.sh` - install and configure everything
+- `litellm_config.yaml` - LiteLLM model mapping.
+- `goose_server.py` - local HTTP task server
+- `goose_client.py` - Python client (`submit_task`, `get_task_status`)
+- `goose_task.py` - CLI script to submit tasks and optionally wait for completion
 
-`setup.sh` writes these required Goose keys:
-
-- `GOOSE_PROVIDER: litellm`
-- `GOOSE_MODEL: bedrock-nova-lite`
-- `LITELLM_HOST: http://localhost:4000`
-- `LITELLM_BASE_PATH: v1/chat/completions`
-
-## 1) Download
+## 1) Setup
 
 ```bash
-git clone <your-repo-url>
 cd agents-goose
-```
-
-## 2) Install + Configure
-
-```bash
 chmod +x setup.sh
 ./setup.sh
 ```
 
-If you do not have AWS credentials yet:
+If needed, configure AWS credentials:
 
 ```bash
 aws configure
 ```
 
-## 3) Run
+## 2) Run services
 
-Start LiteLLM proxy in terminal 1:
+Terminal 1 (LiteLLM proxy):
 
 ```bash
 cd agents-goose
 source .venv/bin/activate
-litellm --config litellm_config.yaml
+litellm --config litellm_config.yaml --port 4321
 ```
 
-Run Goose in terminal 2:
+Terminal 2 (task server):
 
 ```bash
-goose run --text "Write a hello world program in Python"
+cd agents-goose
+source .venv/bin/activate
+python goose_server.py
 ```
 
-## 4) Verify it is using Bedrock Nova Lite
+## 3) Run test client
 
-- LiteLLM config is in `litellm_config.yaml`
-- model route is `bedrock/amazon.nova-lite-v1:0`
-- Goose config is written to `~/.config/goose/config.yaml`
+Terminal 3:
 
-## Common error
+```bash
+cd agents-goose
+source .venv/bin/activate
+python goose_task.py --task "Write a hello world program in Python" --wait
+```
 
-If you see a Bedrock authorization error, add IAM permissions for:
+You can optionally specify a different model (defaults to `bedrock-nova-lite`):
 
-- `bedrock:InvokeModel`
-- `bedrock:InvokeModelWithResponseStream`
+```bash
+python goose_task.py --task "Write a hello world program" --model bedrock-nova-pro --wait
+```
 
-If LiteLLM fails with `uvloop`/Python 3.14 import errors, rerun `./setup.sh` to recreate `.venv` with a supported Python version.
+It submits the task, waits for completion, and shows the final status and output.
 
-If Goose says `No provider configured`, rerun `./setup.sh` and verify `~/.config/goose/config.yaml` contains `GOOSE_PROVIDER` and `GOOSE_MODEL` (uppercase keys).
+## API
+
+- `POST /tasks` with body:
+
+```json
+{
+  "task": "Write exactly one line: Hello, world!",
+  "model": "bedrock-nova-lite"
+}
+```
+
+- `GET /tasks/<task_id>` returns task status (`queued`, `running`, `completed`, `failed`) and output.
+
+## Notes
+
+- Goose config is written to `~/.config/goose/config.yaml` by `setup.sh`.
+- Required keys are uppercase: `GOOSE_PROVIDER`, `GOOSE_MODEL`, `LITELLM_HOST`, `LITELLM_BASE_PATH`.

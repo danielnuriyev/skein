@@ -1,5 +1,24 @@
+# LiteLLM configuration for AWS Bedrock Nova models proxy
+#
+# This file maps the local model names to the actual AWS Bedrock
+# foundation model ARN/identifiers.
+# It sets the default AWS region for API requests and expects AWS credentials
+# to be configured in the environment or ~/.aws/credentials.
+
 model_list:
+  - model_name: bedrock-nova-micro
+    litellm_params:
+      model: bedrock/amazon.nova-micro-v1:0
+      aws_region_name: us-east-1
   - model_name: bedrock-nova-lite
     litellm_params:
       model: bedrock/amazon.nova-lite-v1:0
+      aws_region_name: us-east-1
+  - model_name: bedrock-nova-pro
+    litellm_params:
+      model: bedrock/amazon.nova-pro-v1:0
+      aws_region_name: us-east-1
+  - model_name: bedrock-nova-premier
+    litellm_params:
+      model: bedrock/amazon.nova-premier-v1:0
       aws_region_name: us-east-1

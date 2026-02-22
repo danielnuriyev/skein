@@ -1,1 +1,6 @@
-I want goose to write the generated code to files
+- check how goose fixes an error
+- complete a coding task, create a PR and post to Slack
+- automate my common tasks such as code review and optimization
+- integrate with Slack for common tasks
+- use catalog and data to build code, sql, charts to answer questions
+- guess data meaning from a sample + column name
