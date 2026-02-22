@@ -1,4 +1,4 @@
-# Goose Task Server (LiteLLM + Bedrock)
+# Goose Task Server
 
 This project runs Goose behind a local HTTP task server.
 
