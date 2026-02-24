@@ -1,18 +1,19 @@
-# Goose Task Server
+# Skein
 
-This project runs Goose behind a local HTTP task server.
-
-The goal is to call this server from Slack and other applications.
+Goals:
+- To wrap [Goose](https://github.com/block/goose) in a RESTful server in order to call it from Slack and other products.
+- To have a broader selection of models
+- To make it easy to add tools
+- To have more ways of using Goose
 
 ## Files
 
 - `setup.sh` - install and configure everything
 - `start_server.sh` - start both LiteLLM proxy and Goose task server
 - `stop_server.sh` - stop both LiteLLM proxy and Goose task server
+- `start_prompt.sh` - interactive prompt for submitting tasks
 - `litellm_config.yaml` - LiteLLM model mapping.
 - `goose_config.yaml` - Local Goose configuration for the task server
-- `goose_server.py` - local HTTP task server
-- `goose_client.py` - Python client (`submit_task`, `get_task_status`)
 - `goose_task.py` - CLI script to submit tasks and optionally wait for completion
 
 ## 1) Setup
@@ -29,6 +30,8 @@ If needed, configure AWS credentials:
 aws configure
 ```
 
+I haven't played with the other major clouds yet.
+
 ## 2) Run services
 
 ### Option 1: Automated startup script (recommended)
@@ -39,10 +42,22 @@ cd agents-goose
 ```
 
 This script will automatically:
-- Kill any existing processes on ports 4321 and 8765
+- Kill any existing processes on ports 4321 and 8765 (restart mode, default)
 - Activate the virtual environment
 - Start both LiteLLM proxy and Goose task server in the background
 - Display PIDs and stop commands
+
+#### Options:
+- `--restart` (default): Restart services if already running
+- `--no-restart`: Only start services if they're not already running
+- `--help`: Show usage information
+
+#### Examples:
+```bash
+./start_server.sh              # Start/restart services (default)
+./start_server.sh --restart    # Same as default
+./start_server.sh --no-restart # Only start if not running
+```
 
 ### Stopping services
 
@@ -56,27 +71,31 @@ This script will:
 - Report success/failure status
 - Handle cases where services are already stopped
 
+### Interactive task prompt
+
+```bash
+cd agents-goose
+./start_prompt.sh
+```
+
+This starts an interactive session where you can submit tasks without leaving the terminal:
+
+```
+goose> task "Write a hello world program in Python"
+goose> task mytask.md
+goose> help
+goose> quit
+```
+
+Available commands:
+- `task "your task here"` - Submit a task as text
+- `task filename.md` - Submit a task from a markdown file
+- `help` - Show available commands
+- `quit`/`exit`/`q` - Exit the interactive session
+
 ### Option 2: Manual startup
 
-Terminal 1 (LiteLLM proxy):
-
-```bash
-cd agents-goose
-source .venv/bin/activate
-litellm --config litellm_config.yaml --port 4321
-```
-
-Terminal 2 (task server):
-
-```bash
-cd agents-goose
-source .venv/bin/activate
-python goose_server.py
-```
-
-## 3) Run test client
-
-Terminal 3:
+## Run test client
 
 ```bash
 cd agents-goose
@@ -127,10 +146,3 @@ task_id = response["task_id"]
 result = client.wait_for_done(task_id)
 print("Task result:", result)
 ```
-
-## Notes
-
-- Goose config is managed in `goose_config.yaml` (created manually).
-- The task server uses `goose_config.yaml` as its local configuration, isolated from your global Goose settings.
-- Required keys are uppercase: `GOOSE_PROVIDER`, `GOOSE_MODEL`, `LITELLM_HOST`, `LITELLM_BASE_PATH`.
-- The task server runs Goose with bounded turns/retries to prevent runaway executions.
