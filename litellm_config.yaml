@@ -10,3 +10,6 @@ model_list:
     litellm_params:
       model: bedrock/us.anthropic.claude-opus-4-6-v1
       aws_region_name: us-east-1
+
+litellm_settings:
+  modify_params: true

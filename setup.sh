@@ -48,7 +48,7 @@ if [ ! -d "${VENV_DIR}" ] || [ "${RECREATE_VENV}" -eq 1 ]; then
 fi
 
 echo "Installing LiteLLM dependencies in .venv..."
-uv pip install -q --python "${VENV_DIR}/bin/python" "litellm[proxy]" boto3 python-multipart
+uv pip install -q --python "${VENV_DIR}/bin/python" "litellm[proxy]" boto3 python-multipart certifi
 
 if [ ! -f "${HOME}/.aws/credentials" ]; then
   echo "Warning: ${HOME}/.aws/credentials not found."

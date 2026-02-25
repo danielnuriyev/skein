@@ -4,3 +4,7 @@
 __pycache__
 
 .task*
+
+.logs/
+
+.pytest_cache
