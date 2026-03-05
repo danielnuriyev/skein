@@ -23,7 +23,7 @@ spec:
         - containerPort: 3000
         env:
         - name: PYTHONPATH
-          value: "/app/src"
+          value: "/app"
         - name: PORT
           value: "3000"
         - name: GOOSE_SERVER_URL
@@ -37,7 +37,7 @@ spec:
               name: goose-secrets
               key: SLACK_SIGNING_SECRET
         workingDir: /app
-        command: ["python", "-m", "src.slack_server"]
+        command: ["python", "-m", "src.services.slack_server"]
 ---
 apiVersion: v1
 kind: Service

@@ -42,7 +42,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 echo "Starting Goose Task Server services..."
 
@@ -96,7 +96,7 @@ sleep 3
 
 # Start Goose task server in background
 echo "Starting Goose task server on port 8765..."
-python "${SCRIPT_DIR}/src/goose_server.py" > "${SCRIPT_DIR}/.logs/goose_server.log" 2>&1 &
+PYTHONPATH="${SCRIPT_DIR}" python "${SCRIPT_DIR}/src/services/goose_server.py" > "${SCRIPT_DIR}/.logs/goose_server.log" 2>&1 &
 GOOSE_PID=$!
 
 # Wait a moment for services to fully start

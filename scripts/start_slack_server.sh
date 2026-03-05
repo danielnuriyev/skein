@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Default values
 RESTART_SERVICES=true
@@ -40,7 +40,7 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Environment Variables:"
             echo "  SLACK_SIGNING_SECRET    For request verification (recommended)"
-            echo "  GOOSE_SERVER_URL        URL of src/goose_server.py (default: http://localhost:8765)"
+            echo "  GOOSE_SERVER_URL        URL of src/services/goose_server.py (default: http://localhost:8765)"
             echo ""
             echo "Examples:"
             echo "  $0                           # Start server (restart if running)"
@@ -101,7 +101,7 @@ mkdir -p "${SCRIPT_DIR}/.logs"
 
 # Start Slack middleware server in background
 echo "Starting Slack middleware server on port ${SLACK_PORT}..."
-PORT="${SLACK_PORT}" python "${SCRIPT_DIR}/src/slack_server.py" > "${SCRIPT_DIR}/.logs/slack_server.log" 2>&1 &
+PORT="${SLACK_PORT}" PYTHONPATH="${SCRIPT_DIR}" python "${SCRIPT_DIR}/src/services/slack_server.py" > "${SCRIPT_DIR}/.logs/slack_server.log" 2>&1 &
 SLACK_PID=$!
 
 # Wait a moment for server to start

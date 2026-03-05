@@ -23,9 +23,9 @@ spec:
         - containerPort: 8765
         env:
         - name: PYTHONPATH
-          value: "/app/src"
+          value: "/app"
         workingDir: /app
-        command: ["python", "-m", "src.goose_server"]
+        command: ["python", "-m", "src.services.goose_server"]
 ---
 apiVersion: v1
 kind: Service

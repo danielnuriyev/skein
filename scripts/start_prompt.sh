@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Colors for output
 RED='\033[0;31m'
@@ -81,7 +81,7 @@ while true; do
                     continue
                 fi
                 echo -e "${YELLOW}📄 Submitting task from file: $args${NC}"
-                python "${SCRIPT_DIR}/src/goose_task.py" --task-file "$expanded_path" --wait
+                PYTHONPATH="${SCRIPT_DIR}" python "${SCRIPT_DIR}/src/services/goose_task.py" --task-file "$expanded_path" --wait
             else
                 # It's direct text (should be quoted)
                 if [[ "$args" != \"*\" ]]; then
@@ -91,7 +91,7 @@ while true; do
                 # Remove surrounding quotes
                 task_text=$(echo "$args" | sed 's/^"\(.*\)"$/\1/')
                 echo -e "${YELLOW}💬 Submitting task: $task_text${NC}"
-                python "${SCRIPT_DIR}/src/goose_task.py" --task "$task_text" --wait
+                PYTHONPATH="${SCRIPT_DIR}" python "${SCRIPT_DIR}/src/services/goose_task.py" --task "$task_text" --wait
             fi
             echo ""
             ;;

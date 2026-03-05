@@ -5,13 +5,13 @@ import json
 from unittest.mock import Mock, patch, MagicMock
 from urllib.error import URLError, HTTPError
 
-from src.dagster_tool import DagsterTool
+from src.tools.dagster_tool import DagsterTool
 
 
 class TestDagsterToolInitialization:
     """Test DagsterTool initialization and connection."""
 
-    @patch('src.dagster_tool.urlopen')
+    @patch('src.tools.dagster_tool.urlopen')
     def test_successful_connection(self, mock_urlopen):
         """Test successful connection to Dagster GraphQL."""
         mock_response = Mock()
@@ -21,7 +21,7 @@ class TestDagsterToolInitialization:
         tool = DagsterTool()
         assert tool.graphql_url == "http://localhost:3000/graphql"
 
-    @patch('src.dagster_tool.urlopen')
+    @patch('src.tools.dagster_tool.urlopen')
     def test_connection_failure(self, mock_urlopen):
         """Test graceful handling of connection failure."""
         mock_urlopen.side_effect = URLError("Connection refused")
@@ -44,7 +44,7 @@ class TestGraphQLQueries:
         """Set up test fixtures."""
         self.tool = DagsterTool()
 
-    @patch('src.dagster_tool.urlopen')
+    @patch('src.tools.dagster_tool.urlopen')
     def test_successful_query(self, mock_urlopen):
         """Test successful GraphQL query execution."""
         mock_response = Mock()
@@ -57,7 +57,7 @@ class TestGraphQLQueries:
         assert result == expected_data
         mock_urlopen.assert_called_once()
 
-    @patch('src.dagster_tool.urlopen')
+    @patch('src.tools.dagster_tool.urlopen')
     def test_query_with_variables(self, mock_urlopen):
         """Test GraphQL query with variables."""
         mock_response = Mock()
@@ -69,7 +69,7 @@ class TestGraphQLQueries:
 
         assert result["data"]["result"] == "ok"
 
-    @patch('src.dagster_tool.urlopen')
+    @patch('src.tools.dagster_tool.urlopen')
     def test_http_error(self, mock_urlopen):
         """Test handling of HTTP errors."""
         mock_urlopen.side_effect = HTTPError(None, 500, "Internal Server Error", None, None)
@@ -79,7 +79,7 @@ class TestGraphQLQueries:
         assert "errors" in result
         assert len(result["errors"]) == 1
 
-    @patch('src.dagster_tool.urlopen')
+    @patch('src.tools.dagster_tool.urlopen')
     def test_network_error(self, mock_urlopen):
         """Test handling of network errors."""
         mock_urlopen.side_effect = URLError("Network unreachable")
@@ -97,7 +97,7 @@ class TestPipelineListing:
         """Set up test fixtures."""
         self.tool = DagsterTool()
 
-    @patch('src.dagster_tool.DagsterTool._execute_query')
+    @patch('src.tools.dagster_tool.DagsterTool._execute_query')
     def test_list_pipelines_success(self, mock_execute):
         """Test successful pipeline listing."""
         mock_response = {
@@ -123,7 +123,7 @@ class TestPipelineListing:
         assert result["pipelines"][0]["description"] == "First pipeline"
         assert result["pipelines"][1]["description"] is None
 
-    @patch('src.dagster_tool.DagsterTool._execute_query')
+    @patch('src.tools.dagster_tool.DagsterTool._execute_query')
     def test_list_pipelines_repository_not_found(self, mock_execute):
         """Test pipeline listing when repository doesn't exist."""
         mock_response = {
@@ -140,7 +140,7 @@ class TestPipelineListing:
         assert result["success"] is False
         assert "not found" in result["error"]
 
-    @patch('src.dagster_tool.DagsterTool._execute_query')
+    @patch('src.tools.dagster_tool.DagsterTool._execute_query')
     def test_list_pipelines_graphql_error(self, mock_execute):
         """Test pipeline listing with GraphQL errors."""
         mock_execute.return_value = {"errors": [{"message": "GraphQL error"}]}
@@ -166,7 +166,7 @@ class TestPipelineLaunching:
         """Set up test fixtures."""
         self.tool = DagsterTool()
 
-    @patch('src.dagster_tool.DagsterTool._execute_query')
+    @patch('src.tools.dagster_tool.DagsterTool._execute_query')
     def test_launch_pipeline_success(self, mock_execute):
         """Test successful pipeline launch."""
         mock_response = {
@@ -189,7 +189,7 @@ class TestPipelineLaunching:
         assert result["status"] == "STARTING"
         assert "launched successfully" in result["message"]
 
-    @patch('src.dagster_tool.DagsterTool._execute_query')
+    @patch('src.tools.dagster_tool.DagsterTool._execute_query')
     def test_launch_pipeline_with_config(self, mock_execute):
         """Test pipeline launch with run configuration."""
         mock_response = {
@@ -217,7 +217,7 @@ class TestPipelineLaunching:
         assert "runConfigData" in variables
         assert variables["runConfigData"] == run_config
 
-    @patch('src.dagster_tool.DagsterTool._execute_query')
+    @patch('src.tools.dagster_tool.DagsterTool._execute_query')
     def test_launch_pipeline_with_run_id(self, mock_execute):
         """Test pipeline launch with specific run ID."""
         mock_response = {
@@ -238,7 +238,7 @@ class TestPipelineLaunching:
         assert result["success"] is True
         assert result["run_id"] == "custom-run-789"
 
-    @patch('src.dagster_tool.DagsterTool._execute_query')
+    @patch('src.tools.dagster_tool.DagsterTool._execute_query')
     def test_launch_pipeline_not_found(self, mock_execute):
         """Test pipeline launch when pipeline doesn't exist."""
         mock_response = {
@@ -256,7 +256,7 @@ class TestPipelineLaunching:
         assert result["success"] is False
         assert "not found" in result["error"]
 
-    @patch('src.dagster_tool.DagsterTool._execute_query')
+    @patch('src.tools.dagster_tool.DagsterTool._execute_query')
     def test_launch_pipeline_graphql_error(self, mock_execute):
         """Test pipeline launch with GraphQL errors."""
         mock_execute.return_value = {"errors": [{"message": "Invalid syntax"}]}
@@ -274,7 +274,7 @@ class TestBackfillOperations:
         """Set up test fixtures."""
         self.tool = DagsterTool()
 
-    @patch('src.dagster_tool.DagsterTool._execute_query')
+    @patch('src.tools.dagster_tool.DagsterTool._execute_query')
     def test_run_backfill_success(self, mock_execute):
         """Test successful backfill execution."""
         mock_response = {
@@ -296,7 +296,7 @@ class TestBackfillOperations:
         assert result["partitions"] == partition_names
         assert result["from_failure"] is True
 
-    @patch('src.dagster_tool.DagsterTool._execute_query')
+    @patch('src.tools.dagster_tool.DagsterTool._execute_query')
     def test_run_backfill_partition_set_not_found(self, mock_execute):
         """Test backfill with non-existent partition set."""
         mock_response = {
@@ -330,7 +330,7 @@ class TestPipelineStatus:
         """Set up test fixtures."""
         self.tool = DagsterTool()
 
-    @patch('src.dagster_tool.DagsterTool._execute_query')
+    @patch('src.tools.dagster_tool.DagsterTool._execute_query')
     def test_get_pipeline_status_success(self, mock_execute):
         """Test successful pipeline status retrieval."""
         mock_response = {
@@ -356,7 +356,7 @@ class TestPipelineStatus:
         assert result["mode"] == "default"
         assert result["tags"] == [{"key": "user", "value": "test"}]
 
-    @patch('src.dagster_tool.DagsterTool._execute_query')
+    @patch('src.tools.dagster_tool.DagsterTool._execute_query')
     def test_get_pipeline_status_not_found(self, mock_execute):
         """Test pipeline status for non-existent run."""
         mock_response = {
@@ -390,7 +390,7 @@ class TestRunListing:
         """Set up test fixtures."""
         self.tool = DagsterTool()
 
-    @patch('src.dagster_tool.DagsterTool._execute_query')
+    @patch('src.tools.dagster_tool.DagsterTool._execute_query')
     def test_list_runs_success(self, mock_execute):
         """Test successful run listing."""
         mock_response = {
@@ -428,7 +428,7 @@ class TestRunListing:
         assert result["runs"][0]["pipeline_name"] == "pipeline1"
         assert result["runs"][1]["status"] == "FAILED"
 
-    @patch('src.dagster_tool.DagsterTool._execute_query')
+    @patch('src.tools.dagster_tool.DagsterTool._execute_query')
     def test_list_runs_filtered_by_pipeline(self, mock_execute):
         """Test run listing filtered by pipeline name."""
         mock_response = {
@@ -466,7 +466,7 @@ class TestConcurrency:
         """Set up test fixtures."""
         self.tool = DagsterTool()
 
-    @patch('src.dagster_tool.DagsterTool._execute_query')
+    @patch('src.tools.dagster_tool.DagsterTool._execute_query')
     def test_concurrent_pipeline_launches(self, mock_execute):
         """Test multiple concurrent pipeline launches."""
         import threading

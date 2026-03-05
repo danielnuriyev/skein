@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Default values
 RESTART_SERVICES=true
@@ -115,7 +115,7 @@ mkdir -p "${SCRIPT_DIR}/../.logs"
 
 # Start GitHub reviewer server in background
 echo "Starting GitHub PR Reviewer on port ${GITHUB_PORT}..."
-PORT="${GITHUB_PORT}" python "${SCRIPT_DIR}/../src/github_pr_reviewer.py" > "${SCRIPT_DIR}/../.logs/github_reviewer.log" 2>&1 &
+PORT="${GITHUB_PORT}" PYTHONPATH="${SCRIPT_DIR}" python "${SCRIPT_DIR}/src/services/github_pr_reviewer.py" > "${SCRIPT_DIR}/.logs/github_reviewer.log" 2>&1 &
 GITHUB_PID=$!
 
 # Wait a moment for server to start
@@ -129,7 +129,7 @@ if kill -0 "$GITHUB_PID" 2>/dev/null; then
     echo "  Server URL: http://localhost:${GITHUB_PORT}"
     echo "  Webhook endpoint: http://localhost:${GITHUB_PORT}/webhook"
     echo ""
-    echo "Logs: ${SCRIPT_DIR}/../.logs/github_reviewer.log"
+    echo "Logs: ${SCRIPT_DIR}/.logs/github_reviewer.log"
     echo ""
     echo "To expose this server to GitHub:"
     echo "  1. Install ngrok: https://ngrok.com/download"
@@ -148,6 +148,6 @@ if kill -0 "$GITHUB_PID" 2>/dev/null; then
     echo ""
     echo "Server is running in the background."
 else
-    echo "❌ Failed to start GitHub PR Reviewer. Check logs: ${SCRIPT_DIR}/../.logs/github_reviewer.log"
+    echo "❌ Failed to start GitHub PR Reviewer. Check logs: ${SCRIPT_DIR}/.logs/github_reviewer.log"
     exit 1
 fi

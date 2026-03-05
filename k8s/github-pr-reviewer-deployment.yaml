@@ -23,7 +23,7 @@ spec:
         - containerPort: 4000
         env:
         - name: PYTHONPATH
-          value: "/app/src"
+          value: "/app"
         - name: PORT
           value: "4000"
         - name: GOOSE_SERVER_URL
@@ -42,7 +42,7 @@ spec:
               name: goose-secrets
               key: GITHUB_TOKEN
         workingDir: /app
-        command: ["python", "-m", "src.github_pr_reviewer"]
+        command: ["python", "-m", "src.services.github_pr_reviewer"]
 ---
 apiVersion: v1
 kind: Service

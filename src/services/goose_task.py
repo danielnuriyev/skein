@@ -13,7 +13,7 @@ Usage:
 import argparse
 from pathlib import Path
 
-from goose_client import GooseTaskClient
+from src.clients.goose_client import GooseTaskClient
 
 
 def parse_args() -> argparse.Namespace:

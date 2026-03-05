@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
 import tempfile
 
-from src.github_pr_reviewer import (
+from src.services.github_pr_reviewer import (
     verify_github_webhook,
     fetch_pr_diff,
     post_github_review,
@@ -32,8 +32,8 @@ class TestWebhookVerification:
         ).hexdigest()
         signature_header = f"sha256={signature}"
 
-        with patch('src.github_pr_reviewer.GITHUB_WEBHOOK_SECRET', secret):
-            with patch('src.github_pr_reviewer.request') as mock_request:
+        with patch('src.services.github_pr_reviewer.GITHUB_WEBHOOK_SECRET', secret):
+            with patch('src.services.github_pr_reviewer.request') as mock_request:
                 mock_request.headers = {
                     'X-Hub-Signature-256': signature_header
                 }
@@ -47,8 +47,8 @@ class TestWebhookVerification:
         payload = '{"test": "data"}'
         wrong_signature = "sha256=wrongsignature123"
 
-        with patch('src.github_pr_reviewer.GITHUB_WEBHOOK_SECRET', secret):
-            with patch('src.github_pr_reviewer.request') as mock_request:
+        with patch('src.services.github_pr_reviewer.GITHUB_WEBHOOK_SECRET', secret):
+            with patch('src.services.github_pr_reviewer.request') as mock_request:
                 mock_request.headers = {
                     'X-Hub-Signature-256': wrong_signature
                 }
@@ -58,8 +58,8 @@ class TestWebhookVerification:
 
     def test_missing_signature_header(self):
         """Test verification when signature header is missing."""
-        with patch('src.github_pr_reviewer.GITHUB_WEBHOOK_SECRET', 'secret'):
-            with patch('src.github_pr_reviewer.request') as mock_request:
+        with patch('src.services.github_pr_reviewer.GITHUB_WEBHOOK_SECRET', 'secret'):
+            with patch('src.services.github_pr_reviewer.request') as mock_request:
                 mock_request.headers = {}
                 mock_request.body = b'{"test": "data"}'
 
@@ -67,7 +67,7 @@ class TestWebhookVerification:
 
     def test_no_secret_configured(self):
         """Test verification when no secret is configured."""
-        with patch('src.github_pr_reviewer.GITHUB_WEBHOOK_SECRET', ''):
+        with patch('src.services.github_pr_reviewer.GITHUB_WEBHOOK_SECRET', ''):
             assert verify_github_webhook() is True  # Skip verification
 
     def test_timestamp_too_old(self):
@@ -78,8 +78,8 @@ class TestWebhookVerification:
         secret = "test-secret"
         payload = f'{{"test": "data", "timestamp": "{old_timestamp}"}}'
 
-        with patch('src.github_pr_reviewer.GITHUB_WEBHOOK_SECRET', secret):
-            with patch('src.github_pr_reviewer.request') as mock_request:
+        with patch('src.services.github_pr_reviewer.GITHUB_WEBHOOK_SECRET', secret):
+            with patch('src.services.github_pr_reviewer.request') as mock_request:
                 signature = hmac.new(
                     secret.encode(),
                     payload.encode(),
@@ -98,7 +98,7 @@ class TestWebhookVerification:
 class TestPRDiffFetching:
     """Test PR diff fetching functionality."""
 
-    @patch('src.github_pr_reviewer.urlopen')
+    @patch('src.services.github_pr_reviewer.urlopen')
     def test_fetch_pr_diff_success(self, mock_urlopen):
         """Test successful PR diff fetching."""
         mock_response = Mock()
@@ -109,10 +109,10 @@ class TestPRDiffFetching:
 
         assert result == "diff content here"
 
-    @patch('src.github_pr_reviewer.urlopen')
+    @patch('src.services.github_pr_reviewer.urlopen')
     def test_fetch_pr_diff_with_auth(self, mock_urlopen):
         """Test PR diff fetching with authentication."""
-        with patch('src.github_pr_reviewer.GITHUB_TOKEN', 'test-token'):
+        with patch('src.services.github_pr_reviewer.GITHUB_TOKEN', 'test-token'):
             mock_response = Mock()
             mock_response.read.return_value = b"authenticated diff"
             mock_urlopen.return_value.__enter__.return_value = mock_response
@@ -125,7 +125,7 @@ class TestPRDiffFetching:
             assert 'Authorization' in headers
             assert headers['Authorization'] == 'token test-token'
 
-    @patch('src.github_pr_reviewer.urlopen')
+    @patch('src.services.github_pr_reviewer.urlopen')
     def test_fetch_pr_diff_error(self, mock_urlopen):
         """Test PR diff fetching with network error."""
         from urllib.error import URLError
@@ -154,8 +154,8 @@ class TestReviewFormatting:
             }
         }
 
-        with patch('src.github_pr_reviewer.fetch_pr_diff', return_value="test diff"):
-            with patch('src.github_pr_reviewer.Path') as mock_path:
+        with patch('src.services.github_pr_reviewer.fetch_pr_diff', return_value="test diff"):
+            with patch('src.services.github_pr_reviewer.Path') as mock_path:
                 mock_file = Mock()
                 mock_file.exists.return_value = True
                 mock_file.read.return_value = "Guidelines content"
@@ -184,8 +184,8 @@ class TestReviewFormatting:
             }
         }
 
-        with patch('src.github_pr_reviewer.fetch_pr_diff', return_value="diff"):
-            with patch('src.github_pr_reviewer.Path') as mock_path:
+        with patch('src.services.github_pr_reviewer.fetch_pr_diff', return_value="diff"):
+            with patch('src.services.github_pr_reviewer.Path') as mock_path:
                 mock_file = Mock()
                 mock_file.exists.return_value = True
                 mock_file.read.return_value = "Guidelines"
@@ -211,8 +211,8 @@ class TestReviewFormatting:
             }
         }
 
-        with patch('src.github_pr_reviewer.fetch_pr_diff', return_value="diff"):
-            with patch('src.github_pr_reviewer.Path') as mock_path:
+        with patch('src.services.github_pr_reviewer.fetch_pr_diff', return_value="diff"):
+            with patch('src.services.github_pr_reviewer.Path') as mock_path:
                 mock_file = Mock()
                 mock_file.exists.return_value = False
                 mock_path.return_value.parent.parent = Mock()
@@ -382,8 +382,8 @@ class TestGitHubReviewPosting:
         self.repo_name = "test/repo"
         self.pr_number = 123
 
-    @patch('src.github_pr_reviewer.GITHUB_TOKEN', 'test-token')
-    @patch('src.github_pr_reviewer.urlopen')
+    @patch('src.services.github_pr_reviewer.GITHUB_TOKEN', 'test-token')
+    @patch('src.services.github_pr_reviewer.urlopen')
     def test_post_github_review_success(self, mock_urlopen):
         """Test successful GitHub review posting."""
         mock_response = Mock()
@@ -399,15 +399,15 @@ class TestGitHubReviewPosting:
         url = call_args[0][0].full_url
         assert "/pulls/123/reviews" in url
 
-    @patch('src.github_pr_reviewer.GITHUB_TOKEN', '')
+    @patch('src.services.github_pr_reviewer.GITHUB_TOKEN', '')
     def test_post_github_review_no_token(self):
         """Test review posting when no token is configured."""
         result = post_github_review(self.repo_name, self.pr_number, "test review")
 
         assert result is None  # Function returns early
 
-    @patch('src.github_pr_reviewer.GITHUB_TOKEN', 'test-token')
-    @patch('src.github_pr_reviewer.urlopen')
+    @patch('src.services.github_pr_reviewer.GITHUB_TOKEN', 'test-token')
+    @patch('src.services.github_pr_reviewer.urlopen')
     def test_post_github_review_with_line_comments(self, mock_urlopen):
         """Test review posting with line-specific comments."""
         mock_response = Mock()
@@ -437,8 +437,8 @@ class TestGitHubReviewPosting:
         assert request_data["comments"][0]["position"] == 15
         assert "Goose AI Comment" in request_data["comments"][0]["body"]
 
-    @patch('src.github_pr_reviewer.GITHUB_TOKEN', 'test-token')
-    @patch('src.github_pr_reviewer.urlopen')
+    @patch('src.services.github_pr_reviewer.GITHUB_TOKEN', 'test-token')
+    @patch('src.services.github_pr_reviewer.urlopen')
     def test_post_github_review_api_error_fallback(self, mock_urlopen):
         """Test fallback to Issues API when Reviews API fails."""
         # First call (Reviews API) fails
@@ -483,8 +483,8 @@ class TestConcurrencyAndPerformance:
                     "repository": {"full_name": "test/repo"}
                 }
 
-                with patch('src.github_pr_reviewer.fetch_pr_diff', return_value=f"diff {webhook_id}"):
-                    with patch('src.github_pr_reviewer.Path') as mock_path:
+                with patch('src.services.github_pr_reviewer.fetch_pr_diff', return_value=f"diff {webhook_id}"):
+                    with patch('src.services.github_pr_reviewer.Path') as mock_path:
                         mock_file = Mock()
                         mock_file.exists.return_value = True
                         mock_file.read.return_value = "Guidelines"
@@ -531,8 +531,8 @@ class TestConcurrencyAndPerformance:
             "repository": {"full_name": "big/repo"}
         }
 
-        with patch('src.github_pr_reviewer.fetch_pr_diff', return_value=large_diff):
-            with patch('src.github_pr_reviewer.Path') as mock_path:
+        with patch('src.services.github_pr_reviewer.fetch_pr_diff', return_value=large_diff):
+            with patch('src.services.github_pr_reviewer.Path') as mock_path:
                 mock_file = Mock()
                 mock_file.exists.return_value = True
                 mock_file.read.return_value = "Guidelines"
@@ -553,8 +553,8 @@ class TestConcurrencyAndPerformance:
     ])
     def test_signature_verification_edge_cases(self, signature_valid, expected):
         """Test webhook signature verification edge cases."""
-        with patch('src.github_pr_reviewer.GITHUB_WEBHOOK_SECRET', 'secret'):
-            with patch('src.github_pr_reviewer.request') as mock_request:
+        with patch('src.services.github_pr_reviewer.GITHUB_WEBHOOK_SECRET', 'secret'):
+            with patch('src.services.github_pr_reviewer.request') as mock_request:
                 if signature_valid:
                     payload = '{"test": "data"}'
                     signature = hmac.new(
@@ -583,8 +583,8 @@ class TestConcurrencyAndPerformance:
         for event_data in malformed_events:
             # Should not crash, should handle gracefully
             try:
-                with patch('src.github_pr_reviewer.fetch_pr_diff', return_value="diff"):
-                    with patch('src.github_pr_reviewer.Path') as mock_path:
+                with patch('src.services.github_pr_reviewer.fetch_pr_diff', return_value="diff"):
+                    with patch('src.services.github_pr_reviewer.Path') as mock_path:
                         mock_file = Mock()
                         mock_file.exists.return_value = True
                         mock_file.read.return_value = "Guidelines"

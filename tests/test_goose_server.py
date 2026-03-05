@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
-from src.goose_server import (
+from src.services.goose_server import (
     build_task_prompt,
     utc_now,
     TASKS,

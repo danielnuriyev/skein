@@ -48,7 +48,7 @@ def build_task_prompt(task_text: str) -> str:
         "Important execution requirements:\n"
         "- Apply changes directly to files in the working directory.\n"
         "- Do not delegate, do not spawn background subtasks, and do not use app generators.\n"
-        "- Use direct file edit, shell tools, and available Python tools (like dagster_tool).\n"
+        "- Use direct file edit, shell tools, and available Python tools (like dagster_tool, glue_tool, athena_tool, trino_tool, datahub_tool).\n"
         "- After editing, verify by reading the target file(s).\n"
     )
     return f"{task_text.strip()}\n\n{guardrails}"

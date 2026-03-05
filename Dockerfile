@@ -19,7 +19,7 @@ COPY src/ /app/src/
 COPY config/ /app/config/
 COPY prompts/ /app/prompts/
 
-ENV PYTHONPATH=/app/src
+ENV PYTHONPATH=/app
 
 # Create logs directory
 RUN mkdir -p /app/.logs && chmod 777 /app/.logs

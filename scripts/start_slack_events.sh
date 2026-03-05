@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Default values
 RESTART_SERVICES=true
@@ -114,7 +114,7 @@ mkdir -p "${SCRIPT_DIR}/.logs"
 
 # Start Slack events server in background
 echo "Starting Slack Events Handler on port ${SLACK_EVENTS_PORT}..."
-PORT="${SLACK_EVENTS_PORT}" python "${SCRIPT_DIR}/src/slack_events.py" > "${SCRIPT_DIR}/.logs/slack_events.log" 2>&1 &
+PORT="${SLACK_EVENTS_PORT}" PYTHONPATH="${SCRIPT_DIR}" python "${SCRIPT_DIR}/src/services/slack_events.py" > "${SCRIPT_DIR}/.logs/slack_events.log" 2>&1 &
 SLACK_EVENTS_PID=$!
 
 # Wait a moment for server to start

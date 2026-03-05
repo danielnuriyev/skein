@@ -17,6 +17,10 @@ Goals:
   - `slack_events.py` - Bottle server for Slack Event Subscriptions (@mentions, messages)
   - `github_pr_reviewer.py` - Bottle server for GitHub PR webhook reviews
   - `dagster_tool.py` - Python tool for Dagster pipeline operations
+  - `glue_tool.py` - Python tool for AWS Glue interactions
+  - `athena_tool.py` - Python tool for AWS Athena interactions
+  - `trino_tool.py` - Python tool for Trino interactions
+  - `datahub_tool.py` - Python tool for DataHub interactions
   - `goose_server.py` - HTTP server for Goose task management
   - `goose_client.py` - Python client for the Goose server API
   - `goose_task.py` - CLI script to submit tasks and optionally wait for completion
@@ -518,6 +522,68 @@ result = list_dagster_pipelines("default")
 1. Execute: run_dagster_backfill('daily_partition_set', ['2024-01-01', '2024-02-01', '2024-03-01'])
 2. Check that the backfill started successfully"
 ```
+
+### Data Catalog Tools
+
+Goose can interact with AWS Athena, AWS Glue, Trino, and DataHub using built-in tool modules. This allows Goose to explore database schemas and query data dictionary information directly.
+
+#### Available Operations:
+
+**AWS Glue (`glue_tool.py`):**
+```python
+from glue_tool import list_glue_databases
+
+# List all databases
+glue_dbs = list_glue_databases()
+```
+
+**AWS Athena (`athena_tool.py`):**
+```python
+from athena_tool import list_athena_databases, get_athena_create_statement
+
+# List all databases
+athena_dbs = list_athena_databases()
+
+# Get table schema
+schema = get_athena_create_statement("my_database", "my_table", s3_output="s3://my-athena-results/")
+```
+
+**Trino (`trino_tool.py`):**
+```python
+from trino_tool import list_trino_databases, get_trino_create_statement
+
+# List all Trino databases (catalogs & schemas)
+trino_dbs = list_trino_databases()
+
+# Get table schema
+schema = get_trino_create_statement("my_catalog", "my_schema", "my_table")
+```
+
+**DataHub (`datahub_tool.py`):**
+```python
+from datahub_tool import search_datahub_dataset, get_datahub_table_description, get_datahub_column_description
+
+# Search for a dataset by name
+results = search_datahub_dataset("users_table")
+urn = results[0]["urn"]
+
+# Get table and column descriptions
+table_desc = get_datahub_table_description(urn)
+col_desc = get_datahub_column_description(urn, "user_id")
+```
+
+**Example Goose Tasks:**
+```
+"Can you look up the schema for the 'transactions' table in Trino? Use list_trino_databases() and get_trino_create_statement() to find it."
+
+"Search DataHub for 'customer_profiles' and tell me the description of the 'lifetime_value' column."
+```
+
+#### Requirements:
+
+- **AWS:** Requires `boto3` to be installed and standard AWS credentials to be configured. The Athena queries require `ATHENA_S3_OUTPUT` environment variable to be set.
+- **Trino:** By default, connects to `http://localhost:8080`. Override with `TRINO_HOST` and `TRINO_USER` environment variables.
+- **DataHub:** By default, connects to `http://localhost:8080/api/graphql`. Override with `DATAHUB_URL` and `DATAHUB_TOKEN`.
 
 #### Tool Functions:
 

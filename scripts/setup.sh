@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENV_DIR="${SCRIPT_DIR}/.venv"
 PYTHON_VERSION="3.12"
 
@@ -84,9 +84,9 @@ echo ""
 echo "Terminal 2:"
 echo "  cd \"${SCRIPT_DIR}\""
 echo "  source .venv/bin/activate"
-echo "  python src/goose_server.py"
+echo "  python src/services/goose_server.py"
 echo ""
 echo "Terminal 3 (example test):"
 echo "  cd \"${SCRIPT_DIR}\""
 echo "  source .venv/bin/activate"
-echo "  python src/goose_task.py --task \"Write a hello world program in Python\" --wait"
+echo "  python src/services/goose_task.py --task \"Write a hello world program in Python\" --wait"
