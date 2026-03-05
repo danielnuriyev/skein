@@ -280,6 +280,16 @@ def format_pr_review_request(event_data: dict) -> str:
     repo_name = repo.get("full_name", "")
     branch = pr.get("head", {}).get("ref", "")
 
+    # Note on architecture choice: Diff vs Clone
+    # Currently, this uses a lightweight "ChatGPT-style" approach: fetching the PR diff
+    # and pasting it directly into the prompt. This is fast and stateless, but limits
+    # Goose's context to only the changed lines and truncates large PRs.
+    # 
+    # To unlock Goose's full potential as an autonomous software engineer (allowing it
+    # to read surrounding code, trace function calls across files, or run linters/tests),
+    # this could be upgraded to clone the repository into a temporary directory, 
+    # checkout the PR branch, and set that as Goose's working_directory.
+    
     # Try to fetch the diff
     diff_content = ""
     try:
