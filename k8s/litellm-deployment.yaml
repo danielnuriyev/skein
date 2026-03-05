@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litellm
+  namespace: goose-system
+  labels:
+    app: litellm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: litellm
+  template:
+    metadata:
+      labels:
+        app: litellm
+    spec:
+      containers:
+      - name: litellm
+        image: ghcr.io/berriai/litellm:main-latest
+        ports:
+        - containerPort: 4321
+        env:
+        - name: LITELLM_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: goose-config
+              key: LITELLM_PORT
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: goose-secrets
+              key: AWS_ACCESS_KEY_ID
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: goose-secrets
+              key: AWS_SECRET_ACCESS_KEY
+        - name: AWS_REGION
+          valueFrom:
+            secretKeyRef:
+              name: goose-secrets
+              key: AWS_REGION
+        volumeMounts:
+        - name: litellm-config
+          mountPath: /app/config
+          readOnly: true
+        command: ["python", "-m", "litellm", "--config", "/app/config/litellm_config.yaml", "--port", "4321"]
+      volumes:
+      - name: litellm-config
+        configMap:
+          name: litellm-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: litellm-service
+  namespace: goose-system
+spec:
+  selector:
+    app: litellm
+  ports:
+  - port: 4321
+    targetPort: 4321
+  type: ClusterIP

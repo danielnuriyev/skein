@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: litellm-config
+  namespace: goose-system
+data:
+  litellm_config.yaml: |
+    # LiteLLM configuration for AWS Bedrock Claude 4.6 Opus proxy
+    #
+    # This file maps the local model names to the actual AWS Bedrock
+    # foundation model ARN/identifiers.
+    # It sets the default AWS region for API requests and expects AWS credentials
+    # to be configured in the environment or ~/.aws/credentials.
+
+    model_list:
+      - model_name: bedrock-claude-opus-4-6
+        litellm_params:
+          model: bedrock/us.anthropic.claude-sonnet-4-6
+          aws_region_name: us-east-1
+
+    litellm_settings:
+      modify_params: true

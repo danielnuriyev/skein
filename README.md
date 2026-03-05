@@ -24,7 +24,12 @@ Goals:
 - `scripts/start_slack_events.sh` - start Slack Events Handler for @mention integration
 - `scripts/start_github_reviewer.sh` - start GitHub PR Reviewer for automated code reviews
   - `scripts/lint.sh` - run comprehensive linting for Python, YAML, and shell scripts
+  - `scripts/test.sh` - run comprehensive testing with pytest
   - `scripts/example_dagster_usage.py` - example script demonstrating Dagster tool usage
+  - `scripts/deploy-k8s.sh` - deploy entire ecosystem to Kubernetes
+  - `scripts/start-k8s.sh` - start all Kubernetes services
+  - `scripts/stop-k8s.sh` - stop all Kubernetes services
+  - `scripts/monitor-k8s.sh` - monitor all Kubernetes services
 - `config/` - Configuration files directory
   - `litellm_config.yaml` - LiteLLM model mapping
   - `goose_config.yaml` - Local Goose configuration for the task server
@@ -155,6 +160,28 @@ The server uses Bottle (a lightweight WSGI micro-framework) for minimal dependen
    - Add `commands` scope
    - Go to "Install App" and install it to your workspace
 
+#### Kubernetes Deployment URL:
+
+If you're running the Slack server in Kubernetes, the URL will be different:
+
+1. **Get the LoadBalancer external IP:**
+   ```bash
+   kubectl get services slack-server-service -n goose-system
+   ```
+   Look for the `EXTERNAL-IP` column.
+
+2. **The complete slash command URL:**
+   ```
+   http://<EXTERNAL_IP>:3000/slack/command
+   ```
+
+3. **For local kind clusters:**
+   If no external IP is available, use port forwarding:
+   ```bash
+   kubectl port-forward svc/slack-server-service 3000:3000 -n goose-system
+   ```
+   Then use `http://localhost:3000/slack/command` or expose with ngrok.
+
 #### Usage:
 
 In any Slack channel where the app is installed:
@@ -213,6 +240,24 @@ This starts the events handler server that responds to @mentions and direct mess
    - Subscribe to bot events:
      - `app_mention` - When someone mentions @YourBotName
      - `message.im` - Direct messages to the bot (optional)
+
+#### Kubernetes Deployment URL (Slack Events):
+
+For Kubernetes deployments, use the LoadBalancer IP for the events endpoint:
+
+```bash
+# Get the events service external IP
+kubectl get services slack-events-service -n goose-system
+
+# The events URL will be:
+http://<EXTERNAL_IP>:3001/events
+```
+
+For local clusters, use port forwarding:
+```bash
+kubectl port-forward svc/slack-events-service 3001:3001 -n goose-system
+# Then use: http://localhost:3001/events
+```
 
 4. **Add Bot Token Scope:**
    - Go to "OAuth & Permissions" → "Scopes"
@@ -291,6 +336,24 @@ This starts a webhook server that automatically reviews PRs when they are opened
    - **Secret:** Choose a webhook secret (save this for env var)
    - **Events:** Select "Pull requests"
    - Click **"Add webhook"**
+
+#### Kubernetes Deployment URL (GitHub PR Reviewer):
+
+For Kubernetes deployments, use the LoadBalancer IP for the webhook endpoint:
+
+```bash
+# Get the GitHub reviewer service external IP
+kubectl get services github-pr-reviewer-service -n goose-system
+
+# The webhook URL will be:
+http://<EXTERNAL_IP>:4000/webhook
+```
+
+For local clusters, use port forwarding:
+```bash
+kubectl port-forward svc/github-pr-reviewer-service 4000:4000 -n goose-system
+# Then use: http://localhost:4000/webhook
+```
 
 5. **Set Environment Variables:**
    ```bash
@@ -555,6 +618,100 @@ The linting script can be integrated into CI/CD pipelines:
 ```
 
 ### Option 2: Manual startup
+
+## Kubernetes Deployment
+
+Deploy the entire Goose ecosystem to Kubernetes with separate pods for each service.
+
+### Prerequisites
+
+- Kubernetes cluster (local kind cluster as mentioned in @pulumi-k8s-kind)
+- `kubectl` configured to access your cluster
+- Docker registry access (for custom images)
+
+### Quick Deploy
+
+```bash
+cd agents-goose
+
+# Deploy all services to Kubernetes
+./scripts/deploy-k8s.sh
+
+# Start all services
+./scripts/start-k8s.sh
+
+# Monitor services
+./scripts/monitor-k8s.sh
+```
+
+### Kubernetes Architecture
+
+The deployment creates the following pods in the `goose-system` namespace:
+
+- **`litellm`** - LLM proxy service (port 4321)
+- **`goose-server`** - Main Goose task server (port 8765)
+- **`slack-server`** - Slack slash commands handler (port 3000)
+- **`slack-events`** - Slack @mentions handler (port 3001)
+- **`github-pr-reviewer`** - GitHub PR review webhook handler (port 4000)
+
+### Service Management
+
+```bash
+# Start all services
+./scripts/start-k8s.sh
+
+# Stop all services
+./scripts/stop-k8s.sh
+
+# Monitor all services
+./scripts/monitor-k8s.sh
+
+# View logs for a specific service
+kubectl logs -f deployment/goose-server -n goose-system
+
+# Scale individual services
+kubectl scale deployment goose-server --replicas=2 -n goose-system
+```
+
+### Configuration
+
+**Update secrets with your actual API keys:**
+```bash
+kubectl edit secret goose-secrets -n goose-system
+```
+
+**Update configuration:**
+```bash
+kubectl edit configmap goose-config -n goose-system
+```
+
+### External Access
+
+Services are exposed via LoadBalancer services. Get external IPs:
+```bash
+kubectl get services -n goose-system
+```
+
+Use these IPs to configure:
+- **Slack Apps** - Webhook URLs for slash commands and events
+- **GitHub Webhooks** - PR review webhook URL
+- **External Access** - Direct API access if needed
+
+### Troubleshooting
+
+```bash
+# Check pod status
+kubectl get pods -n goose-system
+
+# Check service health
+kubectl describe service <service-name> -n goose-system
+
+# View detailed pod logs
+kubectl describe pod <pod-name> -n goose-system
+
+# Restart a failing deployment
+kubectl rollout restart deployment/<deployment-name> -n goose-system
+```
 
 ## Run test client
 

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: goose-system
+  labels:
+    name: goose-system
+    app: goose

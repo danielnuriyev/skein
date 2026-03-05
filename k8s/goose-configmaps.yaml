@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: goose-src
+  namespace: goose-system
+binaryData:
+  # This would need to be populated with your actual source files
+  # For production, you'd build a proper Docker image instead
+  __init__.py: ""
+  goose_server.py: |
+    # Your goose_server.py content here (truncated for brevity)
+    # In practice, you'd use a Docker image with the code baked in
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: goose-config-files
+  namespace: goose-system
+data:
+  goose_config.yaml: |
+    GOOSE_PROVIDER: litellm
+    GOOSE_MODEL: bedrock-claude-opus-4-6
+    LITELLM_HOST: http://litellm-service:4321
+    LITELLM_BASE_PATH: v1/chat/completions
+    extensions:
+      summon:
+        enabled: false
+      developer:
+        enabled: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: goose-prompts
+  namespace: goose-system
+data:
+  github_pr_reviewer.md: |
+    **Review Guidelines:**
+    - Focus on code quality, bugs, security issues, and best practices
+    - Check for proper error handling and edge cases
+    - Review code style and documentation
+    - Suggest improvements and optimizations
+    - Be constructive and helpful
+
+    **Output Format:**
+    Please provide a comprehensive code review with:
+
+    1. **Overall Assessment**: A summary paragraph of the code quality
+    2. **Specific Issues**: List any bugs, security concerns, or critical issues
+    3. **Suggestions**: General improvement recommendations
+    4. **Line-Specific Comments**: For targeted feedback, use this format:
+       ```
+       FILE: path/to/file.py:LINE_NUMBER
+       Comment text here...
+       ```
+       Example:
+       ```
+       FILE: src/main.py:15
+       Consider adding input validation for the user_id parameter
+       ```
+
+    Please provide specific file paths and line numbers where possible for actionable feedback.

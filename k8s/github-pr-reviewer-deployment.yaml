@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: github-pr-reviewer
+  namespace: goose-system
+  labels:
+    app: github-pr-reviewer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: github-pr-reviewer
+  template:
+    metadata:
+      labels:
+        app: github-pr-reviewer
+    spec:
+      containers:
+      - name: github-pr-reviewer
+        image: python:3.12-slim
+        ports:
+        - containerPort: 4000
+        env:
+        - name: PYTHONPATH
+          value: "/app/src"
+        - name: PORT
+          value: "4000"
+        - name: GOOSE_SERVER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: goose-config
+              key: GOOSE_SERVER_URL
+        - name: GITHUB_WEBHOOK_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: goose-secrets
+              key: GITHUB_WEBHOOK_SECRET
+        - name: GITHUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: goose-secrets
+              key: GITHUB_TOKEN
+        workingDir: /app
+        command: ["python", "-m", "src.github_pr_reviewer"]
+        volumeMounts:
+        - name: github-src
+          mountPath: /app/src
+          readOnly: true
+        - name: github-prompts
+          mountPath: /app/prompts
+          readOnly: true
+      volumes:
+      - name: github-src
+        configMap:
+          name: github-src
+      - name: github-prompts
+        configMap:
+          name: goose-prompts
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: github-pr-reviewer-service
+  namespace: goose-system
+spec:
+  selector:
+    app: github-pr-reviewer
+  ports:
+  - port: 4000
+    targetPort: 4000
+  type: LoadBalancer  # Expose externally for GitHub webhooks
