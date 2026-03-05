@@ -310,11 +310,16 @@ When a PR is opened or updated, the webhook:
 - **Error Handling** - Checks for proper error handling and edge cases
 - **Performance Suggestions** - Identifies potential optimizations
 - **Constructive Feedback** - Provides helpful, actionable suggestions
+- **Line-Specific Comments** - Targets specific files and line numbers for actionable feedback
+- **Comprehensive Overview** - Overall assessment with detailed breakdown
 
 #### Example Review Output:
 
 ```
 ## 🤖 Goose AI Code Review
+
+### Overall Assessment
+The code demonstrates good structure and follows most best practices. The main areas for improvement are input validation and error handling.
 
 ### Code Quality
 - The error handling in `process_data()` could be more specific
@@ -326,11 +331,15 @@ When a PR is opened or updated, the webhook:
 
 ### Suggestions
 - Add docstrings to all public functions
-- Consider breaking down `complex_function()` into smaller, focused methods
+- Consider breaking down `complex_function()` into smaller methods
 
 ---
 *This review was generated automatically by Goose AI. Please consider the suggestions and implement improvements as appropriate.*
 ```
+
+**Plus line-specific comments on individual files:**
+- `src/main.py:15` - Consider adding input validation for the user_id parameter
+- `tests/test_main.py:25` - Missing test case for edge condition
 
 #### Environment variables:
 

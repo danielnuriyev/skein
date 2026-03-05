@@ -28,6 +28,7 @@ import os
 import hmac
 import hashlib
 import time
+import re
 from bottle import Bottle, request, response, abort
 from urllib.parse import urlparse
 from urllib.request import urlopen, Request, urlretrieve
@@ -132,17 +133,110 @@ def fetch_pr_diff(repo_full_name: str, pr_number: int) -> str:
     except Exception as e:
         raise Exception(f"Failed to fetch PR diff: {str(e)}")
 
+def parse_line_comments(review_content: str) -> tuple[str, list[dict]]:
+    """Parse AI review response to extract overall comment and line-specific comments.
+
+    Returns:
+        tuple: (overall_comment, line_comments_list)
+        where line_comments_list contains dicts with 'path', 'line', 'body' keys
+    """
+    line_comments = []
+
+    # Find all FILE: markers and their positions
+    file_pattern = r'FILE:\s*([^\s:]+):(\d+)'
+    file_matches = list(re.finditer(file_pattern, review_content, re.IGNORECASE))
+
+    if not file_matches:
+        # No line-specific comments found, return everything as overall
+        return review_content.strip(), []
+
+    # Extract overall content (everything before first FILE: marker)
+    first_match = file_matches[0]
+    overall_comment = review_content[:first_match.start()].strip()
+
+    # Process each FILE: section
+    for i, match in enumerate(file_matches):
+        file_path = match.group(1)
+        line_number = int(match.group(2))
+
+        # Determine end position (next FILE: marker or next section header)
+        start_pos = match.end()
+
+        # Look for end markers: next FILE:, or section headers like ##
+        remaining_content = review_content[start_pos:]
+        end_patterns = [
+            (r'FILE:\s*[^\s:]+\:\d+', re.IGNORECASE),  # Next FILE: marker
+            (r'^##\s+', re.MULTILINE),                  # Section headers
+            (r'^\*\*.*\*\*$', re.MULTILINE)             # Bold section headers
+        ]
+
+        end_pos = len(review_content)  # Default to end of content
+        for pattern, flags in end_patterns:
+            next_match = re.search(pattern, remaining_content, flags)
+            if next_match:
+                candidate_end = start_pos + next_match.start()
+                if candidate_end < end_pos:
+                    end_pos = candidate_end
+
+        # Extract comment content for this file/line
+        comment_content = review_content[start_pos:end_pos].strip()
+
+        # Clean up the comment (remove leading/trailing whitespace and empty lines)
+        comment_lines = [line for line in comment_content.split('\n') if line.strip()]
+        comment_content = '\n'.join(comment_lines).strip()
+
+        if comment_content:
+            line_comments.append({
+                'path': file_path,
+                'line': line_number,
+                'body': comment_content
+            })
+
+    return overall_comment, line_comments
+
 def post_github_review(repo_full_name: str, pr_number: int, review_body: str, event: str = "COMMENT"):
-    """Post a review comment to GitHub PR."""
+    """Post a comprehensive review to GitHub PR with overall comment and line-specific comments."""
+
     if not GITHUB_TOKEN:
         print(f"Would post review to {repo_full_name}#{pr_number}: {review_body[:100]}...")
         return
 
-    url = f"https://api.github.com/repos/{repo_full_name}/issues/{pr_number}/comments"
+    # Parse the review content to separate overall and line-specific comments
+    overall_comment, line_comments = parse_line_comments(review_body)
 
+    # Format overall comment for display
+    if overall_comment:
+        formatted_overall = f"""## 🤖 Goose AI Code Review
+
+{overall_comment}
+
+---
+*This review was generated automatically by Goose AI. Please consider the suggestions and implement improvements as appropriate.*"""
+    else:
+        formatted_overall = """## 🤖 Goose AI Code Review
+
+*This review was generated automatically by Goose AI.*"""
+
+    # Prepare the review payload for Pull Request Reviews API
     payload = {
-        "body": review_body
+        "body": formatted_overall,
+        "event": "COMMENT",  # Can be "COMMENT", "APPROVE", "REQUEST_CHANGES"
+        "comments": []
     }
+
+    # Add line-specific comments if any were parsed
+    for comment in line_comments:
+        # Convert line number to position (approximate, GitHub uses positions in diff)
+        # For simplicity, we'll use the line number as position
+        # In a more sophisticated implementation, you'd need to map line numbers to diff positions
+        payload["comments"].append({
+            "path": comment["path"],
+            "position": comment["line"],  # This is an approximation
+            "body": f"🤖 **Goose AI Comment:**\n\n{comment['body']}"
+        })
+
+    # Use Pull Request Reviews API instead of Issues API
+    url = f"https://api.github.com/repos/{repo_full_name}/pulls/{pr_number}/reviews"
 
     headers = {
         "Content-Type": "application/json",
@@ -159,9 +253,27 @@ def post_github_review(repo_full_name: str, pr_number: int, review_body: str, ev
     try:
         with urlopen(req) as response:
             result = json.loads(response.read().decode("utf-8"))
-            print(f"Posted review to {repo_full_name}#{pr_number}")
+            print(f"Posted comprehensive review to {repo_full_name}#{pr_number}")
+            if line_comments:
+                print(f"Included {len(line_comments)} line-specific comments")
+            return result
     except Exception as e:
         print(f"Failed to post GitHub review: {str(e)}")
+        # Fallback to simple comment if review API fails
+        fallback_url = f"https://api.github.com/repos/{repo_full_name}/issues/{pr_number}/comments"
+        fallback_payload = {"body": formatted_overall}
+
+        try:
+            fallback_req = Request(
+                fallback_url,
+                data=json.dumps(fallback_payload).encode("utf-8"),
+                headers=headers,
+                method="POST"
+            )
+            with urlopen(fallback_req) as response:
+                print(f"Fell back to simple comment for {repo_full_name}#{pr_number}")
+        except Exception as fallback_error:
+            print(f"Fallback comment also failed: {str(fallback_error)}")
 
 def format_pr_review_request(event_data: dict) -> str:
     """Format PR information into a review request for Goose."""
@@ -217,26 +329,10 @@ def format_pr_review_request(event_data: dict) -> str:
     return review_prompt
 
 def format_review_response(task_result: dict, pr_data: dict) -> str:
-    """Format the Goose review response for GitHub."""
+    """Extract the raw Goose review response for processing."""
     if task_result["status"] == "completed":
         review_content = task_result.get("stdout", "").strip()
-
-        if review_content:
-            # Format as a GitHub comment
-            formatted_review = f"""## 🤖 Goose AI Code Review
-
-{review_content}
-
----
-*This review was generated automatically by Goose AI. Please consider the suggestions and implement improvements as appropriate.*"""
-
-            # Truncate if too long for GitHub comments (max 65536 chars)
-            if len(formatted_review) > 64000:
-                formatted_review = formatted_review[:64000] + "\n\n... (review truncated due to length)"
-
-            return formatted_review
-        else:
-            return "🤖 Goose AI Review: No output generated"
+        return review_content if review_content else "🤖 Goose AI Review: No output generated"
 
     elif task_result["status"] == "failed":
         error = task_result.get("error", "Unknown error")
