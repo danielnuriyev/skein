@@ -17,7 +17,8 @@ spec:
     spec:
       containers:
       - name: goose-server
-        image: python:3.12-slim
+        image: goose-app:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 8765
         env:
@@ -25,30 +26,6 @@ spec:
           value: "/app/src"
         workingDir: /app
         command: ["python", "-m", "src.goose_server"]
-        volumeMounts:
-        - name: goose-src
-          mountPath: /app/src
-          readOnly: true
-        - name: goose-config
-          mountPath: /app/config
-          readOnly: true
-        - name: goose-prompts
-          mountPath: /app/prompts
-          readOnly: true
-        - name: goose-logs
-          mountPath: /app/.logs
-      volumes:
-      - name: goose-src
-        configMap:
-          name: goose-src
-      - name: goose-config
-        configMap:
-          name: goose-config-files
-      - name: goose-prompts
-        configMap:
-          name: goose-prompts
-      - name: goose-logs
-        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

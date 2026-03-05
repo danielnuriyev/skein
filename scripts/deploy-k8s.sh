@@ -67,7 +67,7 @@ apply_manifest "${K8S_DIR}/namespace.yaml" "namespace"
 apply_manifest "${K8S_DIR}/configmap.yaml" "config maps"
 apply_manifest "${K8S_DIR}/secret.yaml" "secrets"
 apply_manifest "${K8S_DIR}/litellm-configmap.yaml" "LiteLLM config"
-apply_manifest "${K8S_DIR}/goose-configmaps.yaml" "Goose config maps"
+# apply_manifest "${K8S_DIR}/goose-configmaps.yaml" "Goose config maps"
 
 # Deploy services
 apply_manifest "${K8S_DIR}/litellm-deployment.yaml" "LiteLLM deployment"

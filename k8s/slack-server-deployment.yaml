@@ -17,7 +17,8 @@ spec:
     spec:
       containers:
       - name: slack-server
-        image: python:3.12-slim
+        image: goose-app:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 3000
         env:
@@ -37,10 +38,6 @@ spec:
               key: SLACK_SIGNING_SECRET
         workingDir: /app
         command: ["python", "-m", "src.slack_server"]
-        volumeMounts:
-        - name: slack-src
-          mountPath: /app/src
-          readOnly: true
 ---
 apiVersion: v1
 kind: Service

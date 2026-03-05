@@ -17,7 +17,8 @@ spec:
     spec:
       containers:
       - name: slack-events
-        image: python:3.12-slim
+        image: goose-app:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 3001
         env:
@@ -42,10 +43,6 @@ spec:
               key: SLACK_BOT_TOKEN
         workingDir: /app
         command: ["python", "-m", "src.slack_events"]
-        volumeMounts:
-        - name: slack-events-src
-          mountPath: /app/src
-          readOnly: true
 ---
 apiVersion: v1
 kind: Service

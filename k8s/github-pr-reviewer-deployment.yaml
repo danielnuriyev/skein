@@ -17,7 +17,8 @@ spec:
     spec:
       containers:
       - name: github-pr-reviewer
-        image: python:3.12-slim
+        image: goose-app:latest
+        imagePullPolicy: Never
         ports:
         - containerPort: 4000
         env:
@@ -42,20 +43,6 @@ spec:
               key: GITHUB_TOKEN
         workingDir: /app
         command: ["python", "-m", "src.github_pr_reviewer"]
-        volumeMounts:
-        - name: github-src
-          mountPath: /app/src
-          readOnly: true
-        - name: github-prompts
-          mountPath: /app/prompts
-          readOnly: true
-      volumes:
-      - name: github-src
-        configMap:
-          name: github-src
-      - name: github-prompts
-        configMap:
-          name: goose-prompts
 ---
 apiVersion: v1
 kind: Service

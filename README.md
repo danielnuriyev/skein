@@ -634,7 +634,12 @@ Deploy the entire Goose ecosystem to Kubernetes with separate pods for each serv
 ```bash
 cd agents-goose
 
-# Deploy all services to Kubernetes
+# 1. First, build the docker image for the Python apps and load it to your kind cluster
+#    (If you are using a remote cluster, you would push the image to a registry)
+docker build -t goose-app:latest .
+kind load docker-image goose-app:latest --name local
+
+# 2. Deploy all services to Kubernetes
 ./scripts/deploy-k8s.sh
 
 # Start all services
