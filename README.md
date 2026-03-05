@@ -16,12 +16,14 @@ Goals:
   - `slack_server.py` - Bottle middleware server for Slack slash commands (/goose)
   - `slack_events.py` - Bottle server for Slack Event Subscriptions (@mentions, messages)
   - `github_pr_reviewer.py` - Bottle server for GitHub PR webhook reviews
+  - `dagster_tool.py` - Python tool for Dagster pipeline operations
   - `goose_server.py` - HTTP server for Goose task management
   - `goose_client.py` - Python client for the Goose server API
   - `goose_task.py` - CLI script to submit tasks and optionally wait for completion
 - `scripts/start_slack_server.sh` - start Slack middleware server for slash commands (/goose)
 - `scripts/start_slack_events.sh` - start Slack Events Handler for @mention integration
 - `scripts/start_github_reviewer.sh` - start GitHub PR Reviewer for automated code reviews
+  - `scripts/example_dagster_usage.py` - example script demonstrating Dagster tool usage
 - `config/` - Configuration files directory
   - `litellm_config.yaml` - LiteLLM model mapping
   - `goose_config.yaml` - Local Goose configuration for the task server
@@ -354,6 +356,73 @@ The code demonstrates good structure and follows most best practices. The main a
 - Verify webhook secret matches the environment variable
 - Test webhook delivery in GitHub repository settings
 - Use `lsof -ti:4000 | xargs kill -9` to stop the reviewer
+
+### Dagster Pipeline Operations
+
+Goose can interact with Dagster pipelines using the built-in `dagster_tool.py` module. This allows for pipeline execution, backfills, and status monitoring.
+
+#### Available Operations:
+
+**Pipeline Management:**
+```python
+from dagster_tool import run_dagster_pipeline, run_dagster_backfill, check_dagster_pipeline_status
+
+# Launch a pipeline
+result = run_dagster_pipeline("etl_pipeline", "__repository__")
+
+# Launch with custom config
+run_config = {"solids": {"my_solid": {"config": {"param": "value"}}}}
+result = run_dagster_pipeline("etl_pipeline", "__repository__", run_config)
+
+# Run a backfill
+result = run_dagster_backfill("daily_partition_set", ["2023-01-01", "2023-12-31"])
+
+# Check pipeline status
+result = check_dagster_pipeline_status("run-123")
+
+# List pipelines
+result = list_dagster_pipelines("default")
+```
+
+**Example Goose Tasks:**
+```
+"Launch the ETL pipeline in production mode:
+1. Execute: run_dagster_pipeline('etl_pipeline', '__repository__')
+2. Monitor the execution status
+3. Report any errors or confirm success"
+
+"Run a backfill for the data pipeline from January to March 2024:
+1. Execute: run_dagster_backfill('daily_partition_set', ['2024-01-01', '2024-02-01', '2024-03-01'])
+2. Check that the backfill started successfully"
+```
+
+#### Tool Functions:
+
+- **`run_dagster_pipeline(pipeline_name, repository_name="__repository__", run_config=None)`**
+  - Launches a new pipeline run via GraphQL API
+
+- **`run_dagster_backfill(partition_set_name, partition_names, from_failure=False)`**
+  - Executes a backfill for specified partitions via GraphQL
+
+- **`check_dagster_pipeline_status(run_id)`**
+  - Gets the status of a specific pipeline run
+
+- **`list_dagster_pipelines(repository_name="default")`**
+  - Lists all available pipelines in a repository
+
+- **`list_dagster_runs(pipeline_name=None, limit=10)`**
+  - Lists recent pipeline runs with optional filtering
+
+#### Requirements:
+
+- **Dagster Webserver must be running** (provides GraphQL API at http://localhost:3000/graphql)
+- **Network access** to Dagster GraphQL endpoint
+- **Proper repository and pipeline names** as configured in Dagster
+- **Optional**: Configure `DAGSTER_GRAPHQL_URL` environment variable for custom endpoint
+
+#### Integration with Goose:
+
+The `dagster_tool.py` is automatically available in Goose's execution environment. Simply reference the functions in your task descriptions and Goose will execute them using the Dagster GraphQL API.
 
 ### Option 2: Manual startup
 
